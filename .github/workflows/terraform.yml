@@ -1,0 +1,180 @@
+name: Terraform
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'infra/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'infra/**'
+  workflow_dispatch:
+
+env:
+  TF_VERSION: '1.9.0'  # Minimum version for use_lockfile support
+  AWS_REGION: 'us-west-2'
+  WORKING_DIRECTORY: 'infra'
+
+jobs:
+  terraform-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Terraform Format Check
+        id: fmt
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: terraform fmt -check
+        continue-on-error: true
+
+      - name: Terraform Init
+        id: init
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        env:
+          TF_BACKEND_BUCKET: ${{ secrets.TF_BACKEND_BUCKET }}
+          TF_BACKEND_KEY: ${{ secrets.TF_BACKEND_KEY }}
+          TF_BACKEND_REGION: ${{ secrets.TF_BACKEND_REGION }}
+          TF_BACKEND_USE_LOCKFILE: ${{ secrets.TF_BACKEND_USE_LOCKFILE }}
+        run: |
+          if [ -n "$TF_BACKEND_BUCKET" ]; then
+            terraform init \
+              -backend-config="bucket=$TF_BACKEND_BUCKET" \
+              -backend-config="key=${TF_BACKEND_KEY:-platform-eks/terraform.tfstate}" \
+              -backend-config="region=${TF_BACKEND_REGION:-us-west-2}" \
+              -backend-config="encrypt=true" \
+              -backend-config="use_lockfile=${TF_BACKEND_USE_LOCKFILE:-true}"
+          else
+            terraform init -backend=false
+          fi
+
+      - name: Terraform Validate
+        id: validate
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        if: github.event_name == 'pull_request'
+        env:
+          TF_BACKEND_BUCKET: ${{ secrets.TF_BACKEND_BUCKET }}
+          TF_BACKEND_KEY: ${{ secrets.TF_BACKEND_KEY }}
+          TF_BACKEND_REGION: ${{ secrets.TF_BACKEND_REGION }}
+          TF_BACKEND_USE_LOCKFILE: ${{ secrets.TF_BACKEND_USE_LOCKFILE }}
+        run: |
+          if [ -n "$TF_BACKEND_BUCKET" ]; then
+            terraform init \
+              -backend-config="bucket=$TF_BACKEND_BUCKET" \
+              -backend-config="key=${TF_BACKEND_KEY:-platform-eks/terraform.tfstate}" \
+              -backend-config="region=${TF_BACKEND_REGION:-us-west-2}" \
+              -backend-config="encrypt=true" \
+              -backend-config="use_lockfile=${TF_BACKEND_USE_LOCKFILE:-true}"
+          fi
+          terraform plan -no-color -input=false -out=tfplan
+        continue-on-error: true
+
+      - name: Comment PR
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        env:
+          PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+            #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+
+            <details><summary>Show Plan</summary>
+
+            \`\`\`
+            ${process.env.PLAN}
+            \`\`\`
+
+            </details>
+
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Working Directory: \`${{ env.WORKING_DIRECTORY }}\`, Workflow: \`${{ github.workflow }}\`*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: terraform-validate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        env:
+          TF_BACKEND_BUCKET: ${{ secrets.TF_BACKEND_BUCKET }}
+          TF_BACKEND_KEY: ${{ secrets.TF_BACKEND_KEY }}
+          TF_BACKEND_REGION: ${{ secrets.TF_BACKEND_REGION }}
+          TF_BACKEND_USE_LOCKFILE: ${{ secrets.TF_BACKEND_USE_LOCKFILE }}
+        run: |
+          if [ -n "$TF_BACKEND_BUCKET" ]; then
+            terraform init \
+              -backend-config="bucket=$TF_BACKEND_BUCKET" \
+              -backend-config="key=${TF_BACKEND_KEY:-platform-eks/terraform.tfstate}" \
+              -backend-config="region=${TF_BACKEND_REGION:-us-west-2}" \
+              -backend-config="encrypt=true" \
+              -backend-config="use_lockfile=${TF_BACKEND_USE_LOCKFILE:-true}"
+          else
+            terraform init
+          fi
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: terraform plan -no-color -input=false -out=tfplan
+        continue-on-error: true
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: terraform apply -auto-approve -no-color -input=false tfplan

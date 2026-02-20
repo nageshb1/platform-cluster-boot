@@ -5,6 +5,7 @@
 *.tfstate.*
 *.tfvars
 *.tfvars.json
+backend-config.hcl
 crash.log
 crash.*.log
 override.tf
