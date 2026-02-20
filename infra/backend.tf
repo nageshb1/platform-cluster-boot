@@ -7,7 +7,7 @@ terraform {
     
     # Default values (can be overridden via backend-config or CLI flags)
     key          = "platform-eks/terraform.tfstate"
-    region       = "us-west-2"
+    region       = "us-east-2"
     encrypt      = true
     use_lockfile = true  # Native S3 locking (Terraform 1.9+)
     
