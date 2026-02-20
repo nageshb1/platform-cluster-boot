@@ -9,7 +9,6 @@ terraform {
     key          = "platform-eks/terraform.tfstate"
     region       = "us-east-2"
     encrypt      = true
-    use_lockfile = true  # Native S3 locking (Terraform 1.9+)
     
     # bucket must be provided via backend-config or CLI flags
   }
