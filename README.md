@@ -56,7 +56,7 @@ See [Backend Setup Guide](docs/BACKEND-SETUP.md) for detailed instructions.
      --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1
    ```
 
-2. **Create IAM role** (see [GitHub Actions Setup Guide](docs/GITHUB-ACTIONS-SETUP.md))
+2. **Create IAM role** — use Terraform (recommended): `cd infra/bootstrap && terraform init && terraform apply` then add the `role_arn` output as GitHub secret `AWS_ROLE_ARN`. See [GitHub Actions Setup Guide](docs/GITHUB-ACTIONS-SETUP.md).
 
 3. **Configure GitHub Secrets**:
    - Go to Repository → **Settings** → **Secrets and variables** → **Actions**

@@ -10,7 +10,41 @@ This guide walks you through setting up GitHub Actions for automated Terraform d
 
 **Note**: This setup uses native S3 locking (`use_lockfile`), so no DynamoDB table is required.
 
-## Step 1: Create S3 Bucket for State
+---
+
+## Option A: Create IAM Role with Terraform (Recommended)
+
+The repo includes Terraform that creates the GitHub OIDC provider and IAM role. Run it **once** with credentials that can create IAM resources (e.g. your local AWS CLI).
+
+1. **Set your repository** (in `infra/bootstrap/terraform.tfvars` or via `-var`):
+
+   ```hcl
+   github_repositories = ["your-org/your-repo"]
+   ```
+
+2. **Apply the bootstrap:**
+
+   ```bash
+   cd infra/bootstrap
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+
+3. **Add the role ARN to GitHub:**
+   - Copy the `role_arn` output.
+   - In GitHub: **Settings** → **Secrets and variables** → **Actions** → **New repository secret**.
+   - Name: `AWS_ROLE_ARN`, Value: the copied `role_arn`.
+
+No access keys are stored in GitHub; the workflow uses OIDC and `role-to-assume` only.
+
+See [infra/bootstrap/README.md](../infra/bootstrap/README.md) for details and multiple repositories.
+
+---
+
+## Option B: Manual Setup (CLI)
+
+### Step 1: Create S3 Bucket for State
 
 Create an S3 bucket to store Terraform state:
 
@@ -45,11 +79,11 @@ aws s3api put-public-access-block \
   "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
 ```
 
-## Step 2: Set Up AWS OIDC Provider
+### Step 2: Set Up AWS OIDC Provider
 
 GitHub Actions uses OpenID Connect (OIDC) to authenticate with AWS without storing long-lived credentials.
 
-### 2.1 Create OIDC Provider (One-time per AWS account)
+#### 2.1 Create OIDC Provider (One-time per AWS account)
 
 ```bash
 # Get your AWS account ID
@@ -63,7 +97,7 @@ aws iam create-open-id-connect-provider \
   --tags Key=Name,Value=GitHubActionsOIDC
 ```
 
-### 2.2 Create IAM Role for GitHub Actions
+#### 2.2 Create IAM Role for GitHub Actions
 
 Create a trust policy file:
 
@@ -103,7 +137,7 @@ aws iam create-role \
   --description "Role for GitHub Actions to run Terraform"
 ```
 
-### 2.3 Attach Required Policies
+#### 2.3 Attach Required Policies
 
 Attach policies that grant permissions to create EKS, VPC, and other resources:
 
@@ -136,7 +170,7 @@ aws iam attach-role-policy \
 
 **Note**: For production, create custom policies with least-privilege access instead of full access.
 
-## Step 3: Configure GitHub Secrets
+### Step 3: Configure GitHub Secrets
 
 1. Go to your GitHub repository
 2. Navigate to **Settings** → **Secrets and variables** → **Actions**
@@ -160,7 +194,7 @@ If you want to use S3 backend for state storage:
 - **`TF_BACKEND_USE_LOCKFILE`**: Set to `true` for native S3 locking (optional, defaults to `true`)
   - Example: `true`
 
-## Step 4: Update Trust Policy for Your Repository
+### Step 4: Update Trust Policy for Your Repository
 
 Update the trust policy to match your exact repository:
 
@@ -197,7 +231,7 @@ aws iam update-assume-role-policy \
   --policy-document file://trust-policy.json
 ```
 
-## Step 5: Test the Workflow
+### Step 5: Test the Workflow
 
 1. Push changes to your repository
 2. Go to **Actions** tab in GitHub
