@@ -28,7 +28,7 @@ resource "aws_iam_openid_connect_provider" "github" {
   tags = {
     Name = "GitHubActionsOIDC"
   }
-}
+} 
 
 # Trust policy: allow GitHub Actions from the specified repo(s) to assume this role
 data "aws_iam_policy_document" "github_trust" {
