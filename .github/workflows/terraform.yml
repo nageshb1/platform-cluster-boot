@@ -15,7 +15,7 @@ on:
 
 env:
   TF_VERSION: '1.9.0'  # Minimum version for use_lockfile support
-  AWS_REGION: 'us-west-2'
+  AWS_REGION: 'us-east-2'
   WORKING_DIRECTORY: 'infra'
 
 jobs:
@@ -61,7 +61,7 @@ jobs:
             terraform init \
               -backend-config="bucket=$TF_BACKEND_BUCKET" \
               -backend-config="key=${TF_BACKEND_KEY:-platform-eks/terraform.tfstate}" \
-              -backend-config="region=${TF_BACKEND_REGION:-us-west-2}" \
+              -backend-config="region=${TF_BACKEND_REGION:-us-east-2}" \
               -backend-config="encrypt=true" \
               -backend-config="use_lockfile=${TF_BACKEND_USE_LOCKFILE:-true}"
           else
@@ -87,7 +87,7 @@ jobs:
             terraform init \
               -backend-config="bucket=$TF_BACKEND_BUCKET" \
               -backend-config="key=${TF_BACKEND_KEY:-platform-eks/terraform.tfstate}" \
-              -backend-config="region=${TF_BACKEND_REGION:-us-west-2}" \
+              -backend-config="region=${TF_BACKEND_REGION:-us-east-2}" \
               -backend-config="encrypt=true" \
               -backend-config="use_lockfile=${TF_BACKEND_USE_LOCKFILE:-true}"
           fi
@@ -161,7 +161,7 @@ jobs:
             terraform init \
               -backend-config="bucket=$TF_BACKEND_BUCKET" \
               -backend-config="key=${TF_BACKEND_KEY:-platform-eks/terraform.tfstate}" \
-              -backend-config="region=${TF_BACKEND_REGION:-us-west-2}" \
+              -backend-config="region=${TF_BACKEND_REGION:-us-east-2}" \
               -backend-config="encrypt=true" \
               -backend-config="use_lockfile=${TF_BACKEND_USE_LOCKFILE:-true}"
           else
