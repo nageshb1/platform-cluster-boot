@@ -112,7 +112,7 @@ resource "aws_iam_role_policy" "github_actions_eks_admin" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "AllowEksClusterManagement"
+        Sid    = "AllowEksClusterAndNodegroups"
         Effect = "Allow"
         Action = [
           "eks:CreateCluster",
@@ -120,10 +120,17 @@ resource "aws_iam_role_policy" "github_actions_eks_admin" {
           "eks:ListClusters",
           "eks:DeleteCluster",
           "eks:TagResource",
-          "eks:UntagResource"
+          "eks:UntagResource",
+          "eks:CreateNodegroup",
+          "eks:DescribeNodegroup",
+          "eks:ListNodegroups",
+          "eks:UpdateNodegroupConfig",
+          "eks:UpdateNodegroupVersion",
+          "eks:DeleteNodegroup"
         ]
         Resource = "*"
       }
     ]
   })
 }
+
