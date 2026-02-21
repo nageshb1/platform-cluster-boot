@@ -13,6 +13,7 @@ provider "aws" {
   region = "us-east-2"
 }
 
+
 # VPC Module - Creates VPC, subnets, NAT gateways, and required networking components
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
