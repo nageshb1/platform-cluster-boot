@@ -104,3 +104,26 @@ resource "aws_iam_role_policy_attachment" "kms" {
   role       = aws_iam_role.github_actions.name
   policy_arn = "arn:aws:iam::aws:policy/AWSKeyManagementServicePowerUser"
 }
+
+resource "aws_iam_role_policy" "github_actions_eks_admin" {
+  role = aws_iam_role.github_actions.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowEksClusterManagement"
+        Effect = "Allow"
+        Action = [
+          "eks:CreateCluster",
+          "eks:DescribeCluster",
+          "eks:ListClusters",
+          "eks:DeleteCluster",
+          "eks:TagResource",
+          "eks:UntagResource"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}

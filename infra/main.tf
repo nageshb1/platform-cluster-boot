@@ -88,3 +88,4 @@ module "eks" {
     Environment = "platform"
   }
 }
+
