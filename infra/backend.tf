@@ -9,7 +9,7 @@ terraform {
     key          = "platform-eks/terraform.tfstate"
     region       = "us-east-2"
     encrypt      = true
-    
+    bucket       = "nageshb1-terraform-state-bucket"
     # bucket must be provided via backend-config or CLI flags
   }
 }
